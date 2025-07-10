@@ -101,6 +101,13 @@ impl RunState {
         }
     }
 
+    pub fn repo_alt_url(&self) -> Result<String> {
+        match self.args.repo_alt_url() {
+            Some(v) => Ok(v),
+            None => bail!("Repo URL not specified"),
+        }
+    }
+
     /// maximum number of threads
     pub fn max_threads(&self) -> usize {
         self.args.max_threads()

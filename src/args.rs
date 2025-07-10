@@ -10,6 +10,9 @@ pub struct Args {
     /// URL of the Maven Repo
     #[arg(short, long)]
     repo: Option<String>,
+    /// Alternate url of the Maven Repo, which is also allowed
+    #[arg(long)]
+    repo_alt: Option<String>,
 
     /// where to put the result
     #[arg(short, long)]
@@ -54,6 +57,9 @@ impl Args {
     }
     pub fn repo_url(&self) -> Option<String> {
         self.repo.clone()
+    }
+    pub fn repo_alt_url(&self) -> Option<String> {
+        self.repo_alt.clone()
     }
 
     /// get the destination for the crawl data

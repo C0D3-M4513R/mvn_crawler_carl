@@ -47,6 +47,9 @@ impl ResponseData {
     pub fn base_url(&self) -> String {
         self.state.repo_url().expect("This has been pre-vetted")
     }
+    pub fn base_alt_url(&self) -> String {
+        self.state.repo_alt_url().expect("This has been pre-vetted")
+    }
 
     // pub fn dest(&self) -> PathBuf {
     //     self.state.args.dest()
@@ -111,22 +114,23 @@ impl ResponseData {
             let gimme_a = Selector::parse("a").expect("Should be able to parse 'a'");
             for a in document.select(&gimme_a) {
                 if let Some(href) = a.attr("href") {
-                    if href.len() > 1
-                        && !href.starts_with(".")
-                        && (!href.starts_with("http") || href.starts_with(&self.base_url()))
-                        && (href.ends_with("/") || href.ends_with(GOLD_FILE))
-                    {
-                        let target = if href.starts_with(&self.base_url()) {
-                            href.to_string()
-                        } else {
-                            format!("{}{}", self.url, href)
-                        };
-                        if target == self.url {
-                            println!("url {} page {}", self.url, string);
-                            panic!("Yak");
-                        }
-                        ret.push(target);
+                    let starts_with_base = href.starts_with(&self.base_url())  || href.starts_with(&self.base_alt_url());
+                    if href.is_empty() { continue; }
+                    if href.starts_with(".") { continue; }
+                    if href.starts_with("http") && !starts_with_base { continue; }
+                    if !href.ends_with("/") && !href.ends_with(GOLD_FILE) { continue; }
+
+                    let target = if starts_with_base {
+                        href.to_string()
+                    } else {
+                        format!("{}{}", self.url, href)
+                    };
+                    if target == self.url {
+                        println!("url {} page {}", self.url, string);
+                        panic!("Yak");
                     }
+                    ret.push(target);
+                    
                 }
             }
         }
