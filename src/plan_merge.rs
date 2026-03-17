@@ -51,7 +51,7 @@ pub fn version_from_metadata(metadata: &Vec<u8>) -> Result<(String, String, Vec<
             let base_path = base_path_from_group_and_artifact(&group, &artifact);
             let mut ret = vec![];
             for v in vers {
-                for s in suffixes() {
+                for s in suffixes(&group, &artifact) {
                     let url = format!("{}{}/{}-{}{}", base_path, v, artifact, v, s);
                     ret.push(url);
                 }
@@ -69,15 +69,30 @@ pub fn version_from_metadata(metadata: &Vec<u8>) -> Result<(String, String, Vec<
         }
     }
 }
-pub fn suffixes() -> Vec<&'static str> {
-    vec![
-        ".jar",
-        ".war",
-        ".ear",
-        "-javadoc.jar",
-        "-sources.jar",
-        ".pom",
-    ]
+pub fn suffixes(group: &String, artifact: &String) -> Vec<&'static str> {
+    if group == "net.minecraftforge" && artifact == "forge" {
+        vec![
+            "-changelog.txt",
+            "-installer.jar",
+            "-mdk.zip",
+            "-universal.jar",
+            "-userdev.jar",
+        ]
+    } else if group.starts_with("de.oceanlabs") {
+        vec![
+            ".zip",
+            "-srg.zip",
+        ]
+    } else {
+        vec![
+            // ".jar",
+            // ".war",
+            // ".ear",
+            // "-javadoc.jar",
+            // "-sources.jar",
+            // ".pom",
+        ]
+    }
 }
 
 /// a command sent from the planner to the targets
