@@ -39,10 +39,58 @@ pub fn should_do_links(links: &Vec<String>, state: State) -> bool {
 pub fn process_page(url: String, client: &mut Client, depth: usize, state: State) -> Result<usize> {
     let mut processed_cnt = 0;
 
-    let page: ResponseData = get_url(&state.repo_url()?, &url, client, state.clone())?;
+    let page = get_url(&state.repo_url()?, &url, client, state.clone());
+    let page = match page {
+        Ok(v) => v,
+        Err(mut err) => {
+            let link = format!("{url}{GOLD_FILE}");
+            // try get the Maven-Metadata regardless
+            match get_subbed_url(&link, client, state.clone()) {
+                Ok(page) => {
+                    match version_from_metadata(page.data()) {
+                        Ok((_, _, _, cont)) => {
+                            let repo_url = state.repo_url()?;
+                            let cont = cont.into_iter()
+                                .filter(|e|std::path::Path::new(e).extension().map_or(true, |v|v=="xml"))
+                                .map(|v|format!("{repo_url}{v}"))
+                                .filter(|v| *v != *page.url())
+                                .collect();
+                            if should_do_links(&cont, state.clone()) {
+                                for link in cont {
+                                    processed_cnt += 1;
+                                    match process_page(link.clone(), client, depth + 1, state.clone()) {
+                                        Ok(sub_cnt) => {
+                                            processed_cnt += sub_cnt;
+                                        }
+                                        Err(e) => {
+                                            error!("Failed to load {}, error {:?}", link, e);
+                                        }
+                                    }
+                                }
+                            }
+
+                            page.save()?;
+                        }
+                        Err(_e) => {
+                        }
+                    }
+                }
+                Err(e) => {
+                    err = err.context(anyhow::format_err!("Failed to fetch {} err {:?}", link, e));
+                    error!("Failed to fetch {} err {:?}", link, e);
+                    return Err(err);
+                }
+            }
+
+            return Ok(processed_cnt);
+        }
+    };
 
     if page.mime_type().starts_with("text/html") {
-        let links = page.html_to_links();
+        let links = page.html_to_links()
+            .into_iter()
+            .filter(|e|std::path::Path::new(e).extension().map_or(true, |v|v=="xml"))
+            .collect::<Vec<_>>();
         let gold_links: Vec<String> = links
             .iter()
             .filter(|v| v.ends_with(GOLD_FILE))
@@ -62,6 +110,7 @@ pub fn process_page(url: String, client: &mut Client, depth: usize, state: State
                             Ok((_, _, _, cont)) => {
                                 let repo_url = state.repo_url()?;
                                 let cont = cont.into_iter()
+                                    .filter(|e|std::path::Path::new(e).extension().map_or(true, |v|v=="xml"))
                                     .map(|v|format!("{repo_url}{v}"))
                                     .collect();
                                 if should_do_links(&cont, state.clone()) {
@@ -121,6 +170,7 @@ pub fn process_page(url: String, client: &mut Client, depth: usize, state: State
             Ok((_, _, _, cont)) => {
                 let repo_url = state.repo_url()?;
                 let cont = cont.into_iter()
+                    .filter(|e|std::path::Path::new(e).extension().map_or(true, |v|v=="xml"))
                     .map(|v| format!("{repo_url}{v}"))
                     .collect();
                 if should_do_links(&cont, state.clone()) {
@@ -141,7 +191,6 @@ pub fn process_page(url: String, client: &mut Client, depth: usize, state: State
         }
     }
 
-    info!("process page {processed_cnt}: {url}");
     Ok(processed_cnt)
 }
 

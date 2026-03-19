@@ -40,6 +40,9 @@ impl ResponseData {
         &self.data
     }
 
+    pub fn url(&self) -> &String {
+        &self.url
+    }
     pub fn mime_type(&self) -> String {
         self.mime_type.clone()
     }
