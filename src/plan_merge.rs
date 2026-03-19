@@ -88,12 +88,12 @@ pub fn suffixes(group: &String, artifact: &String) -> Vec<&'static str> {
         ]
     } else {
         vec![
-            // ".jar",
-            // ".war",
-            // ".ear",
-            // "-javadoc.jar",
-            // "-sources.jar",
-            // ".pom",
+            ".jar",
+            ".war",
+            ".ear",
+            "-javadoc.jar",
+            "-sources.jar",
+            ".pom",
         ]
     }
 }
