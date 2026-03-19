@@ -81,4 +81,6 @@ iterrupted, when it is restarted, only the packages that have differing
 
 `--max-threads` -- the maximum number of threads to use. Default 200. Not
   really a reason to change.
-  
+`--repo-alt` -- Don't deny url's with this prefix and assume that they are the same as from the `--repo` parameter
+`--negative-repo-check` -- When reifying make sure (via HEAD requests), that files don't exist in these repos. 
+  Can be present multiple times
