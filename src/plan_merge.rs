@@ -24,7 +24,7 @@ use crate::{
 pub fn base_path_from_group_and_artifact(group_id: &str, artifact_id: &str) -> String {
     format!("{}/{}/", group_id.replace(".", "/"), artifact_id,)
 }
-pub fn version_from_metadata(metadata: &Vec<u8>) -> Result<(String, String, Vec<String>)> {
+pub fn version_from_metadata(metadata: &Vec<u8>) -> Result<(String, String, Vec<String>, Vec<String>)> {
     let md = XmlElement::parse(metadata.as_slice())?;
 
     // if let Some(md) = xml.get_child("metadata") {
@@ -50,14 +50,17 @@ pub fn version_from_metadata(metadata: &Vec<u8>) -> Result<(String, String, Vec<
         (Some(group), Some(artifact), Some(vers)) if vers.len() > 0 => {
             let base_path = base_path_from_group_and_artifact(&group, &artifact);
             let mut ret = vec![];
+            let mut ret1 = vec![];
             for v in vers {
                 for s in suffixes(&group, &artifact) {
                     let url = format!("{}{}/{}-{}{}", base_path, v, artifact, v, s);
                     ret.push(url);
                 }
+                let url = format!("{}{}/", base_path, v);
+                ret1.push(url);
             }
 
-            Ok((group, artifact, ret))
+            Ok((group, artifact, ret, ret1))
         }
         (group_id, artifact_id, versions) => {
             bail!(
@@ -263,7 +266,7 @@ pub fn plan_merge(dest: Sender<MergeCmd>, state: State) -> Result<()> {
             let mut f = File::open(&crawl_md)?;
             f.read_to_end(&mut md_bytes)?;
         }
-        let (group_id, artifact_id, add_files) = version_from_metadata(&md_bytes)?;
+        let (group_id, artifact_id, add_files, _) = version_from_metadata(&md_bytes)?;
         if crawl_id > 0 && crawl_id % 1000 == 0 {
             let run_time = Instant::now().duration_since(start).as_secs() as f64;
             let total = meta_data_in_crawl.len();
@@ -298,10 +301,10 @@ pub fn plan_merge(dest: Sender<MergeCmd>, state: State) -> Result<()> {
             continue;
         }
 
-        let (_art_group_id, _art_artifact_id, art_add_files) =
+        let (_art_group_id, _art_artifact_id, art_add_files, _) =
             match version_from_metadata(&art_bytes) {
                 Ok(v) => v,
-                Err(_) => (group_id.clone(), artifact_id.clone(), vec![]),
+                Err(_) => (group_id.clone(), artifact_id.clone(), vec![], Vec::new()),
             };
 
         let mut diff_files = HashSet::new();

@@ -59,7 +59,24 @@ pub fn process_page(url: String, client: &mut Client, depth: usize, state: State
                 match get_subbed_url(&gold_link, client, state.clone()) {
                     Ok(page) => {
                         match version_from_metadata(page.data()) {
-                            Ok(_to_load) => {
+                            Ok((_, _, _, cont)) => {
+                                let repo_url = state.repo_url()?;
+                                let cont = cont.into_iter()
+                                    .map(|v|format!("{repo_url}{v}"))
+                                    .collect();
+                                if should_do_links(&cont, state.clone()) {
+                                    for link in cont {
+                                        processed_cnt += 1;
+                                        match process_page(link.clone(), client, depth + 1, state.clone()) {
+                                            Ok(sub_cnt) => {
+                                                processed_cnt += sub_cnt;
+                                            }
+                                            Err(e) => {
+                                                error!("Failed to load {}, error {:?}", link, e);
+                                            }
+                                        }
+                                    }
+                                }
                                 // it's valid, save it and don't load links
                                 load_links = false;
 
@@ -98,6 +115,33 @@ pub fn process_page(url: String, client: &mut Client, depth: usize, state: State
             }
         }
     }
+    //This is not standard conform, but used a lot? let's try those urls anyway!
+    else if page.mime_type().starts_with("text/xml") {
+        match version_from_metadata(page.data()) {
+            Ok((_, _, _, cont)) => {
+                let repo_url = state.repo_url()?;
+                let cont = cont.into_iter()
+                    .map(|v| format!("{repo_url}{v}"))
+                    .collect();
+                if should_do_links(&cont, state.clone()) {
+                    for link in cont {
+                        processed_cnt += 1;
+                        match process_page(link.clone(), client, depth + 1, state.clone()) {
+                            Ok(sub_cnt) => {
+                                processed_cnt += sub_cnt;
+                            }
+                            Err(e) => {
+                                error!("Failed to load {}, error {:?}", link, e);
+                            }
+                        }
+                    }
+                }
+            },
+            Err(_e) => {}
+        }
+    }
+
+    info!("process page {processed_cnt}: {url}");
     Ok(processed_cnt)
 }
 

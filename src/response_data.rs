@@ -118,7 +118,7 @@ impl ResponseData {
                     if href.is_empty() { continue; }
                     if href.starts_with(".") { continue; }
                     if href.starts_with("http") && !starts_with_base { continue; }
-                    if !href.ends_with("/") && !href.ends_with(GOLD_FILE) { continue; }
+                    // if !href.ends_with("/") && !href.ends_with(GOLD_FILE) { continue; }
 
                     let target = if starts_with_base {
                         href.to_string()
