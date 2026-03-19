@@ -107,6 +107,9 @@ impl RunState {
             None => bail!("Repo URL not specified"),
         }
     }
+    pub fn negative_repo_check(&self) -> &Vec<String> {
+        self.args.negative_repo_check()
+    }
 
     /// maximum number of threads
     pub fn max_threads(&self) -> usize {

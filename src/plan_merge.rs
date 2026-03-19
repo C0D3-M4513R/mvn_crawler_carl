@@ -139,8 +139,12 @@ fn read_stream_and_do_merge(rx: Receiver<MergeCmd>, _state: State) -> Result<()>
                             state,
                         } => {
                             let url = format!("{}/{}", state.repo_url()?, source_url);
+                            info!("Loading {url}");
                             match get_subbed_url(&url, &mut client, state.clone()) {
-                                Ok(loaded) => {
+                                Ok(None) => {
+                                    info!("Skipped {url} due to it having been found in the negative repo check args");
+                                }
+                                Ok(Some(loaded)) => {
                                     create_dir_all(match dest_file.parent() {
                                         Some(f) => f,
                                         None => bail!(

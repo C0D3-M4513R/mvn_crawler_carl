@@ -53,6 +53,9 @@ impl ResponseData {
     pub fn base_alt_url(&self) -> String {
         self.state.repo_alt_url().expect("This has been pre-vetted")
     }
+    pub fn negative_repo_check(&self) -> &Vec<String> {
+        self.state.negative_repo_check()
+    }
 
     // pub fn dest(&self) -> PathBuf {
     //     self.state.args.dest()

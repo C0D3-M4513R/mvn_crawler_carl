@@ -13,6 +13,9 @@ pub struct Args {
     /// Alternate url of the Maven Repo, which is also allowed
     #[arg(long)]
     repo_alt: Option<String>,
+    /// Url's where the files shouldn't exist.
+    #[arg(long)]
+    negative_repo_check: Vec<String>,
 
     /// where to put the result
     #[arg(short, long)]
@@ -60,6 +63,9 @@ impl Args {
     }
     pub fn repo_alt_url(&self) -> Option<String> {
         self.repo_alt.clone()
+    }
+    pub fn negative_repo_check(&self) -> &Vec<String> {
+        &self.negative_repo_check
     }
 
     /// get the destination for the crawl data

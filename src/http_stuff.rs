@@ -45,7 +45,7 @@ pub fn process_page(url: String, client: &mut Client, depth: usize, state: State
         Err(mut err) => {
             let link = format!("{url}{GOLD_FILE}");
             // try get the Maven-Metadata regardless
-            match get_subbed_url(&link, client, state.clone()) {
+            match get_url(&state.repo_url()?, &link, client, state.clone()) {
                 Ok(page) => {
                     match version_from_metadata(page.data()) {
                         Ok((_, _, _, cont)) => {
@@ -104,7 +104,7 @@ pub fn process_page(url: String, client: &mut Client, depth: usize, state: State
             // for each one (there should only by 1)
             for gold_link in gold_links {
                 // get the file from the server
-                match get_subbed_url(&gold_link, client, state.clone()) {
+                match get_url(&state.repo_url()?, &gold_link, client, state.clone()) {
                     Ok(page) => {
                         match version_from_metadata(page.data()) {
                             Ok((_, _, _, cont)) => {
@@ -204,16 +204,23 @@ fn delay_429(state: State) {
     }
 }
 
-pub fn get_subbed_url(url: &str, client: &mut Client, state: State) -> Result<ResponseData> {
+pub fn get_subbed_url(url: &str, client: &mut Client, state: State) -> Result<Option<ResponseData>> {
+    for i in state.negative_repo_check(){
+        let url = format!("{}{}", i, &url[state.repo_url()?.len()..]);
+        if head_url(i, &url, client, state.clone())? {
+            return Ok(None);
+        }
+    }
+
     let ret = match state.mirror_url() {
         Some(mirror) => {
             let first = format!("{}{}", mirror, &url[state.repo_url()?.len()..]);
             match get_url(&mirror, &first, client, state.clone()) {
-                Ok(v) => Ok(v),
-                Err(_) => get_url(&state.repo_url()?, url, client, state.clone()),
+                Ok(v) => Ok(Some(v)),
+                Err(_) => get_url(&state.repo_url()?, url, client, state.clone()).map(Some),
             }
         }
-        None => get_url(&state.repo_url()?, url, client, state.clone()),
+        None => get_url(&state.repo_url()?, url, client, state.clone()).map(Some),
     };
     if ret.is_ok() {
         state.inc_asset_fetch_cnt();
@@ -305,6 +312,47 @@ pub fn get_url(
         state.clone(),
     )
 }
+pub fn head_url(
+    server_prefix: &str,
+    url: &str,
+    client: &mut Client,
+    state: State,
+) -> Result<bool> {
+    delay_429(state.clone());
+
+    let url = fix_url(url);
+
+    let info: Response = {
+        // loop 6 times trying to get the page...
+        let mut try_cnt = 0;
+        loop {
+            let val = client.head(&url).send();
+            match val {
+                Ok(x) => {
+                    break x;
+                }
+                Err(e) => {
+                    if try_cnt > 5 {
+                        bail!("Failed to get url {} error {:?}", url, e);
+                    }
+                    try_cnt += 1;
+                }
+            }
+        }
+    };
+
+    let response_code = info.status();
+    if response_code.as_u16() == 429 {
+        let cnt_429 = state.inc_429_cnt();
+        info!("429 count {} url {}", cnt_429, url);
+        sleep(Duration::from_millis(350));
+        let ret = head_url(server_prefix, &url, client, state.clone());
+        state.dec_429_cnt();
+        return ret;
+    }
+
+    Ok(info.status().is_success())
+}
 
 pub fn spawn_a_page(state: State) {
     // increment the running thread before we return from this method
@@ -317,7 +365,7 @@ pub fn spawn_a_page(state: State) {
             page_loop += 1;
             match process_page(page_to_process.clone(), &mut client, 0, state.clone()) {
                 Ok(processed_cnt) => {
-                    if false && page_loop % 100 == 0 {
+                    if true | (false && page_loop % 100 == 0) {
                         info!(
                             "Page process thread {} got to top, cnt {} page {} queue size {}",
                             x,
