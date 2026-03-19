@@ -81,10 +81,12 @@ pub fn suffixes(group: &String, artifact: &String) -> Vec<&'static str> {
             "-universal.jar",
             "-userdev.jar",
         ]
-    } else if group.starts_with("de.oceanlabs") {
+    } else if group.starts_with("de.oceanlabs.mcp") && artifact.starts_with("mcp") {
         vec![
             ".zip",
             "-srg.zip",
+            "-csrg.zip",
+            ".pom"
         ]
     } else {
         vec![
