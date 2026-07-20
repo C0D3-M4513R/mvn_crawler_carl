@@ -15,7 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 reqwest = {version = "0.13", features = ["blocking", "json", "stream", "native-tls-vendored", "http2"]}
-scraper = {version = "0.26"}
+scraper = {version = "0.27"}
 xmltree = {version = "0.12"}
 anyhow = {version = "1"}
 env_logger = {version = "0.11"}
